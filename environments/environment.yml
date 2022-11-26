@@ -1,0 +1,11 @@
+name: blast-reads
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3
+  - fastp=0.20.1
+  - blast=2.13.0
+  - seqtk=1.3
+  - csvtk=0.25.0
