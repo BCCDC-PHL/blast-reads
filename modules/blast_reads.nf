@@ -90,6 +90,8 @@ process csvtk_freq {
 
   script:
   """
-  csvtk freq -t -f 'scomnames' ${blast_results} | csvtk sort -t -k 2:Nr > ${sample_id}_blast_freqs.tsv
+  csvtk freq -t -f 'scomnames' ${blast_results} > ${sample_id}_blast_freqs_unsorted.tsv
+  echo 'scomnames,frequency' | tr ',' \$'\\t' > ${sample_id}_blast_freqs.tsv
+  sort -nrk2 <(tail -qn+2 ${sample_id}_blast_freqs_unsorted.tsv) >> ${sample_id}_blast_freqs.tsv
   """
 }
