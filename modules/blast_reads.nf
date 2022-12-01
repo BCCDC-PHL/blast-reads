@@ -58,22 +58,44 @@ process blastn {
   tuple val(sample_id), path("${sample_id}_${read_type}_blast.tsv"), val(read_type)
 
   script:
+  max_hsps = params.max_hsps == "NO_VALUE" ? "" : "-max_hsps ${params.max_hsps}"
   """
   export BLASTDB="${blast_db_dir}"
   blastn \
     -num_threads ${task.cpus} \
     -query ${reads} \
     -db ${blast_db_name} \
-    -outfmt "6 qseqid sseqid sacc length pident gapopen gaps evalue bitscore staxids sscinames scomnames" \
+    -outfmt "6 qseqid sseqid sacc sstrand qstart qend sstart send length pident gapopen gaps evalue bitscore staxids sscinames scomnames" \
     -max_target_seqs ${params.max_target_seqs} \
-    -max_hsps ${params.max_hsps} \
+    ${max_hsps} \
     -evalue ${params.evalue} \
     -out ${sample_id}_${read_type}_blast_noheader.tsv
 
-  echo "qseqid,sseqid,sacc,length,pident,gapopen,gaps,evalue,bitscore,staxids,sscinames,scomnames" | tr ',' \$'\\t' > ${sample_id}_${read_type}_blast.tsv
+  echo "qseqid,sseqid,sacc,sstrand,qstart,qend,sstart,send,length,pident,gapopen,gaps,evalue,bitscore,staxids,sscinames,scomnames" | tr ',' \$'\\t' > ${sample_id}_${read_type}_blast.tsv
   cat ${sample_id}_${read_type}_blast_noheader.tsv >> ${sample_id}_${read_type}_blast.tsv
   """
 }
+
+process choose_best_hsp_per_query {
+
+  tag { sample_id + ' / ' + read_type}
+
+  executor 'local'
+
+  publishDir "${params.outdir}/${sample_id}", mode: 'copy', pattern: "${sample_id}_${read_type}_blast_best_hsp_per_query.tsv"
+
+  input:
+  tuple val(sample_id), path(blast_report), val(read_type)
+
+  output:
+  tuple val(sample_id), path("${sample_id}_${read_type}_blast_best_hsp_per_query.tsv"), val(read_type)
+
+  script:
+  """
+  choose_best_hsp_per_query.py ${blast_report} > ${sample_id}_${read_type}_blast_best_hsp_per_query.tsv
+  """
+}
+
 
 process csvtk_freq {
 
@@ -93,7 +115,7 @@ process csvtk_freq {
   """
   csvtk freq -t -f 'scomnames' ${blast_results} > ${sample_id}_${read_type}_blast_counts_unsorted.tsv
   echo 'scomnames,frequency' | tr ',' \$'\\t' > ${sample_id}_${read_type}_blast_counts.tsv
-  sort -nrk2 <(tail -qn+2 ${sample_id}_${read_type}_blast_counts_unsorted.tsv) >> ${sample_id}_${read_type}_blast_counts.tsv
+  sort -t \$'\\t' -k2,2nr <(tail -qn+2 ${sample_id}_${read_type}_blast_counts_unsorted.tsv) >> ${sample_id}_${read_type}_blast_counts.tsv
   """
 }
 

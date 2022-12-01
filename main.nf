@@ -6,6 +6,8 @@ include { fastp }               from './modules/blast_reads.nf'
 include { seqtk_seq }           from './modules/blast_reads.nf'
 include { blastn as blastn_r1 } from './modules/blast_reads.nf'
 include { blastn as blastn_r2 } from './modules/blast_reads.nf'
+include { choose_best_hsp_per_query as choose_best_hsp_per_query_r1 } from './modules/blast_reads.nf'
+include { choose_best_hsp_per_query as choose_best_hsp_per_query_r2 } from './modules/blast_reads.nf'
 include { csvtk_freq as csvtk_freq_r1 } from './modules/blast_reads.nf'
 include { csvtk_freq as csvtk_freq_r2 } from './modules/blast_reads.nf'
 include { combine_counts }              from './modules/blast_reads.nf'
@@ -24,17 +26,21 @@ workflow {
 
   main:
 
-    // fastp(ch_fastq)
+    fastp(ch_fastq)
 
-    seqtk_seq(ch_fastq)
+    seqtk_seq(fastp.out.reads)
 
     ch_blastn_r1 = blastn_r1(seqtk_seq.out.map{ it -> [it[0], it[1]] }.combine(ch_blast_db_dir).combine(ch_blast_db_name).combine(Channel.of("R1")))
 
     ch_blastn_r2 = blastn_r2(seqtk_seq.out.map{ it -> [it[0], it[2]] }.combine(ch_blast_db_dir).combine(ch_blast_db_name).combine(Channel.of("R2")))
 
-    ch_blast_counts_r1 = csvtk_freq_r1(ch_blastn_r1)
+    ch_blastn_best_hsp_r1 = choose_best_hsp_per_query_r1(ch_blastn_r1)
 
-    ch_blast_counts_r2 = csvtk_freq_r2(ch_blastn_r2)
+    ch_blastn_best_hsp_r2 = choose_best_hsp_per_query_r2(ch_blastn_r2)
+
+    ch_blast_counts_r1 = csvtk_freq_r1(ch_blastn_best_hsp_r1)
+
+    ch_blast_counts_r2 = csvtk_freq_r2(ch_blastn_best_hsp_r2)
 
     combine_counts(ch_blast_counts_r1.map{ it -> [it[0], it[1]] }.join(ch_blast_counts_r2.map{ it -> [it[0], it[1]] }))
     
