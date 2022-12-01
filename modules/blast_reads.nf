@@ -47,15 +47,15 @@ process seqtk_seq {
 
 process blastn {
 
-  tag { sample_id }
+  tag { sample_id + " / " + read_type }
 
-  publishDir "${params.outdir}/${sample_id}", mode: 'copy', pattern: "${sample_id}_blast.tsv"
+  publishDir "${params.outdir}/${sample_id}", mode: 'copy', pattern: "${sample_id}_${read_type}_blast.tsv"
 
   input:
-  tuple val(sample_id), path(reads), path(blast_db_dir), val(blast_db_name)
+  tuple val(sample_id), path(reads), path(blast_db_dir), val(blast_db_name), val(read_type)
 
   output:
-  tuple val(sample_id), path("${sample_id}_blast.tsv")
+  tuple val(sample_id), path("${sample_id}_${read_type}_blast.tsv"), val(read_type)
 
   script:
   """
@@ -66,32 +66,55 @@ process blastn {
     -db ${blast_db_name} \
     -outfmt "6 qseqid sseqid sacc length pident gapopen gaps evalue bitscore staxids sscinames scomnames" \
     -max_target_seqs ${params.max_target_seqs} \
-    -out ${sample_id}_blast_noheader.tsv
+    -max_hsps ${params.max_hsps} \
+    -evalue ${params.evalue} \
+    -out ${sample_id}_${read_type}_blast_noheader.tsv
 
-  echo "qseqid,sseqid,sacc,length,pident,gapopen,gaps,evalue,bitscore,staxids,sscinames,scomnames" | tr ',' \$'\\t' > ${sample_id}_blast.tsv
-  cat ${sample_id}_blast_noheader.tsv >> ${sample_id}_blast.tsv
+  echo "qseqid,sseqid,sacc,length,pident,gapopen,gaps,evalue,bitscore,staxids,sscinames,scomnames" | tr ',' \$'\\t' > ${sample_id}_${read_type}_blast.tsv
+  cat ${sample_id}_${read_type}_blast_noheader.tsv >> ${sample_id}_${read_type}_blast.tsv
+  """
+}
+
+process csvtk_freq {
+
+  tag { sample_id + " / " + read_type }
+
+  executor 'local'
+
+  publishDir "${params.outdir}/${sample_id}", mode: 'copy', pattern: "${sample_id}_${read_type}_blast_counts.tsv"
+
+  input:
+  tuple val(sample_id), path(blast_results), val(read_type)
+
+  output:
+  tuple val(sample_id), path("${sample_id}_${read_type}_blast_counts.tsv")
+
+  script:
+  """
+  csvtk freq -t -f 'scomnames' ${blast_results} > ${sample_id}_${read_type}_blast_counts_unsorted.tsv
+  echo 'scomnames,frequency' | tr ',' \$'\\t' > ${sample_id}_${read_type}_blast_counts.tsv
+  sort -nrk2 <(tail -qn+2 ${sample_id}_${read_type}_blast_counts_unsorted.tsv) >> ${sample_id}_${read_type}_blast_counts.tsv
   """
 }
 
 
-process csvtk_freq {
+process combine_counts {
 
   tag { sample_id }
 
   executor 'local'
 
-  publishDir "${params.outdir}/${sample_id}", mode: 'copy', pattern: "${sample_id}_blast_freqs.tsv"
+  publishDir "${params.outdir}/${sample_id}", mode: 'copy', pattern: "${sample_id}_combined_blast_counts.tsv"
 
   input:
-  tuple val(sample_id), path(blast_results)
+  tuple val(sample_id), path(blast_counts_r1), path(blast_counts_r2)
 
   output:
-  tuple val(sample_id), path("${sample_id}_blast_freqs.tsv")
+  tuple val(sample_id), path("${sample_id}_combined_blast_counts.tsv")
 
   script:
   """
-  csvtk freq -t -f 'scomnames' ${blast_results} > ${sample_id}_blast_freqs_unsorted.tsv
-  echo 'scomnames,frequency' | tr ',' \$'\\t' > ${sample_id}_blast_freqs.tsv
-  sort -nrk2 <(tail -qn+2 ${sample_id}_blast_freqs_unsorted.tsv) >> ${sample_id}_blast_freqs.tsv
+  combine_counts_by_name.py ${blast_counts_r1} ${blast_counts_r2} > ${sample_id}_combined_blast_counts.tsv
   """
 }
+

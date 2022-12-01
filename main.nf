@@ -2,10 +2,13 @@
 
 nextflow.enable.dsl = 2
 
-include { fastp }       from './modules/blast_reads.nf'
-include { seqtk_seq }   from './modules/blast_reads.nf'
-include { blastn }      from './modules/blast_reads.nf'
-include { csvtk_freq }  from './modules/blast_reads.nf'
+include { fastp }               from './modules/blast_reads.nf'
+include { seqtk_seq }           from './modules/blast_reads.nf'
+include { blastn as blastn_r1 } from './modules/blast_reads.nf'
+include { blastn as blastn_r2 } from './modules/blast_reads.nf'
+include { csvtk_freq as csvtk_freq_r1 } from './modules/blast_reads.nf'
+include { csvtk_freq as csvtk_freq_r2 } from './modules/blast_reads.nf'
+include { combine_counts }              from './modules/blast_reads.nf'
 
 
 workflow {
@@ -25,7 +28,14 @@ workflow {
 
     seqtk_seq(ch_fastq)
 
-    blastn(seqtk_seq.out.map{ it -> [it[0], it[1]] }.combine(ch_blast_db_dir).combine(ch_blast_db_name))
+    ch_blastn_r1 = blastn_r1(seqtk_seq.out.map{ it -> [it[0], it[1]] }.combine(ch_blast_db_dir).combine(ch_blast_db_name).combine(Channel.of("R1")))
 
-    csvtk_freq(blastn.out)
+    ch_blastn_r2 = blastn_r2(seqtk_seq.out.map{ it -> [it[0], it[2]] }.combine(ch_blast_db_dir).combine(ch_blast_db_name).combine(Channel.of("R2")))
+
+    ch_blast_counts_r1 = csvtk_freq_r1(ch_blastn_r1)
+
+    ch_blast_counts_r2 = csvtk_freq_r2(ch_blastn_r2)
+
+    combine_counts(ch_blast_counts_r1.map{ it -> [it[0], it[1]] }.join(ch_blast_counts_r2.map{ it -> [it[0], it[1]] }))
+    
 }
