@@ -43,5 +43,10 @@ workflow {
     ch_blast_counts_r2 = csvtk_freq_r2(ch_blastn_best_hsp_r2)
 
     combine_counts(ch_blast_counts_r1.map{ it -> [it[0], it[1]] }.join(ch_blast_counts_r2.map{ it -> [it[0], it[1]] }))
+
+    if (params.collect_outputs) {
+       fastp.out.reports.map{ it -> it[1] }.collectFile(keepHeader: true, skip: 1, sort: { it -> file(it).readLines()[1].split("\\t")[0] }, storeDir: params.outdir, name: "fastp_report.csv")
+       combine_counts.out.map{ it -> it[1] }.collectFile(keepHeader: true, skip: 1, storeDir: params.outdir, name: "combined_blast_counts.tsv")
+    }
     
 }
