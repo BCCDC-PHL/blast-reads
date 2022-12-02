@@ -24,9 +24,16 @@ def parse_blast_report(blast_report_path):
     return header, blast_report_by_qseqid
 
 
-def choose_best_hsp(blast_records):
-    blast_records_sorted = sorted(blast_records, key=lambda x: float(x['evalue']))
-    best_hsp = blast_records_sorted[0]
+def choose_best_hsp(blast_hsps):
+    blast_hsps_sorted_by_evalue = sorted(blast_hsps, key=lambda x: float(x['evalue']))
+    best_evalue = blast_hsps_sorted_by_evalue[0]['evalue']
+    best_hsps_by_evalue = list(filter(lambda x: x['evalue'] >= best_evalue, blast_hsps_sorted_by_evalue))
+
+    best_hsps_by_evalue_sorted_by_length = sorted(best_hsps_by_evalue, key=lambda x: int(x['length']), reverse=True)
+    best_length_for_best_evalue = int(best_hsps_by_evalue_sorted_by_length[0]['length'])
+    best_hsps_by_evalue_by_length = list(filter(lambda x: int(x['length']) >= best_length_for_best_evalue, best_hsps_by_evalue_sorted_by_length))
+
+    best_hsp = best_hsps_by_evalue_by_length[0]
 
     return best_hsp
 

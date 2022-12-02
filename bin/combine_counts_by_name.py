@@ -43,15 +43,15 @@ def main(args):
     counts_by_name_unsorted = [(name, counts) for name, counts in counts_by_name_combined.items()]
     counts_by_name_sorted = [(name, counts) for name, counts in sorted(counts_by_name_unsorted, key=lambda x: x[1], reverse=True)]
 
-    print('\t'.join(['name', 'counts']))
+    print('\t'.join([args.name_field, args.count_field]))
     for record in counts_by_name_sorted:
         print('\t'.join([record[0], str(record[1])]))
     
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
-    parser.add_argument('--name-field', default="scomnames")
-    parser.add_argument('--count-field', default="frequency")
+    parser.add_argument('--name-field', default="name")
+    parser.add_argument('--count-field', default="count")
     parser.add_argument('counts_by_name_1')
     parser.add_argument('counts_by_name_2')
     args = parser.parse_args()

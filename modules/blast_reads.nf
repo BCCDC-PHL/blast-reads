@@ -114,7 +114,7 @@ process csvtk_freq {
   script:
   """
   csvtk freq -t -f 'scomnames' ${blast_results} > ${sample_id}_${read_type}_blast_counts_unsorted.tsv
-  echo 'scomnames,frequency' | tr ',' \$'\\t' > ${sample_id}_${read_type}_blast_counts.tsv
+  echo 'name,count' | tr ',' \$'\\t' > ${sample_id}_${read_type}_blast_counts.tsv
   sort -t \$'\\t' -k2,2nr <(tail -qn+2 ${sample_id}_${read_type}_blast_counts_unsorted.tsv) >> ${sample_id}_${read_type}_blast_counts.tsv
   """
 }
