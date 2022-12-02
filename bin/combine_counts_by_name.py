@@ -17,6 +17,7 @@ def parse_counts_by_name(counts_by_name_path, name_field, count_field):
 
     return counts_by_name
 
+
 def combine_counts_by_name(counts_by_name_1, counts_by_name_2):
     """
     """
@@ -36,7 +37,7 @@ def combine_counts_by_name(counts_by_name_1, counts_by_name_2):
 
 def main(args):
     counts_by_name_1 = parse_counts_by_name(args.counts_by_name_1, args.name_field, args.count_field)
-    # print(json.dumps(counts_by_name_1, indent=2))
+
     counts_by_name_2 = parse_counts_by_name(args.counts_by_name_2, args.name_field, args.count_field)
     counts_by_name_combined = combine_counts_by_name(counts_by_name_1, counts_by_name_2)
 

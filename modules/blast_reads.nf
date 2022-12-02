@@ -114,8 +114,9 @@ process csvtk_freq {
   script:
   """
   csvtk freq -t -f 'scomnames' ${blast_results} > ${sample_id}_${read_type}_blast_counts_unsorted.tsv
-  echo 'name,count' | tr ',' \$'\\t' > ${sample_id}_${read_type}_blast_counts.tsv
-  sort -t \$'\\t' -k2,2nr <(tail -qn+2 ${sample_id}_${read_type}_blast_counts_unsorted.tsv) >> ${sample_id}_${read_type}_blast_counts.tsv
+  echo 'sample_id,name,count' | tr ',' \$'\\t' > ${sample_id}_${read_type}_blast_counts.tsv
+  sort -t \$'\\t' -k2,2nr <(tail -qn+2 ${sample_id}_${read_type}_blast_counts_unsorted.tsv) \
+    | awk -F \$'\\t' 'BEGIN {OFS=FS}; {print "${sample_id}", \$0}' >> ${sample_id}_${read_type}_blast_counts.tsv
   """
 }
 
@@ -136,7 +137,10 @@ process combine_counts {
 
   script:
   """
-  combine_counts_by_name.py ${blast_counts_r1} ${blast_counts_r2} > ${sample_id}_combined_blast_counts.tsv
+  echo 'sample_id,name,count' | tr ',' \$'\\t' > ${sample_id}_combined_blast_counts.tsv
+  combine_counts_by_name.py ${blast_counts_r1} ${blast_counts_r2} \
+    | tail -qn+2 \
+    | awk -F \$'\\t' 'BEGIN {OFS=FS}; {print "${sample_id}", \$0}' >> ${sample_id}_combined_blast_counts.tsv
   """
 }
 
